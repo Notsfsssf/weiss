@@ -1,5 +1,9 @@
 # weiss
 一个go lib，允许通过本地proxy的方式直连pixiv  
+# 实现
+Android端实现:[Pixez](https://github.com/Notsfsssf/pixez-flutter)  
+IOS端实现:存在信任证书问题  
+Windows&mac:已验证可行
 
 # compile
 如果是go可以直接引用，gomod已经写好  
