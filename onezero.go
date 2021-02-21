@@ -1,4 +1,4 @@
-package weiss
+package weiss 
 
 import (
 	"encoding/json"
@@ -42,13 +42,13 @@ var (
 )
 
 func init() {
-	//hardcodeIpMap["app-api.pixiv.net"] = "210.140.131.199"
+	hardcodeIpMap["app-api.pixiv.net"] = "210.140.131.199"
 }
 
 func (oneZeroReq *OneZeroReq) fetch() (*OneZeroRes, error) {
-	url := fmt.Sprintf("https://1.0.0.1/dns-query?ct=application/dns-json&name=%s&type=A&do=false&cd=false", oneZeroReq.name)
+	url := fmt.Sprintf("https://cloudflare-dns.com/dns-query?ct=application/dns-json&name=%s&type=A&do=false&cd=false", oneZeroReq.name)
 	log.Print(url)
-	v, ok := hardcodeIpMap["American"]
+	v, ok := hardcodeIpMap[oneZeroReq.name]
 	answer := &OneZeroRes{}
 	if ok {
 		answer.Answer = []Answer{{Data: v, TTL: 50, Type: 1}}
@@ -56,10 +56,12 @@ func (oneZeroReq *OneZeroReq) fetch() (*OneZeroRes, error) {
 	}
 	var body []byte
 	var err error
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 3; i++ {
 		body, err = request(url)
 		if err == nil {
 			break
+		} else if i == 2 {
+			body, err = request(strings.ReplaceAll(url, "cloudflare-dns.com", "1.0.0.1"))
 		}
 	}
 	err = json.Unmarshal(body, answer)

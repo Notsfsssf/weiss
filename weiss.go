@@ -54,10 +54,7 @@ func Start(port string) {
 		"s.pximg.net",
 		"pixiv.pximg.net",
 	}
-	blackList := []string{
-		"google.com",
-		"www.google.com",
-	}
+	blackList := []string{}
 	whitePorts := make([]string, len(whiteList))
 	blackPorts := make([]string, len(blackList))
 	for i, s := range whiteList {
@@ -196,7 +193,7 @@ func Close() {
 	}
 }
 
-func buildOneZeroCon(ctx *goproxy.ProxyCtx, ) net.Conn {
+func buildOneZeroCon(ctx *goproxy.ProxyCtx) net.Conn {
 	OneZeroCache.Lock.RLock()
 	data, ok := OneZeroCache.Data[ctx.Req.URL.Hostname()]
 	OneZeroCache.Lock.RUnlock()
