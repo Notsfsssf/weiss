@@ -1,4 +1,4 @@
-package weiss 
+package weiss
 
 import (
 	"encoding/json"
@@ -43,6 +43,7 @@ var (
 
 func init() {
 	hardcodeIpMap["app-api.pixiv.net"] = "210.140.131.199"
+	hardcodeIpMap["oauth.secure.pixiv.net"] = "210.140.131.199"
 }
 
 func (oneZeroReq *OneZeroReq) fetch() (*OneZeroRes, error) {
