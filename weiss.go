@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
+	"fmt"
 	"github.com/elazarl/goproxy"
 	"log"
 	"net"
@@ -21,7 +23,7 @@ var (
 	server *http.Server
 )
 
-func Start(port string) {
+func Start(port string, jsonData string) {
 	configCache := make(map[string]*tls.Config, 0)
 	DELAY := 8 * time.Second
 	whiteList := []string{
@@ -54,6 +56,22 @@ func Start(port string) {
 		"s.pximg.net",
 		"pixiv.pximg.net",
 	}
+	hardMap := make(map[string]string)
+	if len(jsonData) != 0 { //不支持map所以只能传json
+		var f interface{}
+		err := json.Unmarshal([]byte(jsonData), &f)
+		if err == nil {
+			m := f.(map[string]interface{})
+			for k, v := range m {
+				hardMap[k] = v.(string)
+			}
+		}
+	}
+	for k, v := range hardMap {
+		OneZeroCache.Data[k] = v
+		fmt.Println(k + v)
+	}
+
 	blackList := []string{}
 	whitePorts := make([]string, len(whiteList))
 	blackPorts := make([]string, len(blackList))
@@ -63,24 +81,6 @@ func Start(port string) {
 	for i, s := range blackList {
 		blackPorts[i] = s + ":443"
 	}
-
-	//go func() {
-	//	for i := range whitePorts {
-	//		domain := whiteList[i]
-	//		req := OneZeroReq{
-	//			name: domain,
-	//		}
-	//		data, err := req.PrePare()
-	//		if err != nil {
-	//			continue
-	//		}
-	//		OneZeroCache.Lock.Lock()
-	//		OneZeroCache.Data[domain] = *data
-	//		log.Println(*data)
-	//		OneZeroCache.Lock.Unlock()
-	//	}
-	//}()
-	//goproxy.ReqHostMatches()
 
 	proxy := goproxy.NewProxyHttpServer()
 	proxy.OnRequest(
@@ -114,7 +114,7 @@ func Start(port string) {
 		}
 		defer tlsCon.Close()
 		clientWriter := bufio.NewReadWriter(bufio.NewReader(tlsCon), bufio.NewWriter(tlsCon))
-		remoteCon := buildOneZeroCon(ctx)
+		remoteCon := buildOneZeroCon(ctx, hardMap)
 		if remoteCon == nil {
 			panic("Error host:" + ctx.Req.URL.Hostname())
 		}
@@ -122,7 +122,7 @@ func Start(port string) {
 		remote := tls.Client(remoteCon, &tls.Config{
 			InsecureSkipVerify: true,
 			VerifyPeerCertificate: func(rawCerts [][]byte, _ [][]*x509.Certificate) error {
-				return nil //先不听鱼的
+				return nil
 			},
 		})
 		if err := remote.Handshake(); err != nil {
@@ -193,7 +193,7 @@ func Close() {
 	}
 }
 
-func buildOneZeroCon(ctx *goproxy.ProxyCtx) net.Conn {
+func buildOneZeroCon(ctx *goproxy.ProxyCtx, hardMap map[string]string) net.Conn {
 	OneZeroCache.Lock.RLock()
 	data, ok := OneZeroCache.Data[ctx.Req.URL.Hostname()]
 	OneZeroCache.Lock.RUnlock()
@@ -204,6 +204,18 @@ func buildOneZeroCon(ctx *goproxy.ProxyCtx) net.Conn {
 		}
 		return remoteCon
 	}
+
+	if v, ok := hardMap[ctx.Req.URL.Hostname()]; ok {
+		remoteCon, err := net.Dial("tcp", v+ctx.Req.Host[strings.LastIndex(ctx.Req.Host, ":"):])
+		OneZeroCache.Lock.Lock()
+		OneZeroCache.Data[ctx.Req.URL.Hostname()] = v
+		OneZeroCache.Lock.Unlock()
+		if err != nil {
+			return nil
+		}
+		return remoteCon
+	}
+
 	oneZeroReq := OneZeroReq{
 		ctx.Req.URL.Hostname(),
 	}
