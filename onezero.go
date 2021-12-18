@@ -46,8 +46,11 @@ func init() {
 	hardcodeIpMap["oauth.secure.pixiv.net"] = "210.140.131.199"
 }
 
-func (oneZeroReq *OneZeroReq) fetch() (*OneZeroRes, error) {
-	url := fmt.Sprintf("https://1.0.0.1/dns-query?ct=application/dns-json&name=%s&type=A&do=false&cd=false", oneZeroReq.name)
+func (oneZeroReq *OneZeroReq) fetch(doh string) (*OneZeroRes, error) {
+	if doh == "" {
+		doh = "doh.dns.sb"
+	}
+	url := fmt.Sprintf("https://%s/dns-query?ct=application/dns-json&name=%s&type=A&do=false&cd=false", doh, oneZeroReq.name)
 	log.Print(url)
 	v, ok := hardcodeIpMap[oneZeroReq.name]
 	answer := &OneZeroRes{}
@@ -62,7 +65,7 @@ func (oneZeroReq *OneZeroReq) fetch() (*OneZeroRes, error) {
 		if err == nil {
 			break
 		} else if i == 2 {
-			body, err = request(strings.ReplaceAll(url, "1.0.0.1", "cloudflare-dns.com"))
+			body, err = request(strings.ReplaceAll(url, doh, "dns.adguard.com"))
 		}
 	}
 	err = json.Unmarshal(body, answer)
@@ -89,8 +92,8 @@ func request(url string) ([]byte, error) {
 	return body, err
 }
 
-func (oneZeroReq *OneZeroReq) PrePare() (*string, error) {
-	res, err := oneZeroReq.fetch()
+func (oneZeroReq *OneZeroReq) PrePare(doh string) (*string, error) {
+	res, err := oneZeroReq.fetch(doh)
 	if err != nil {
 		return nil, err
 	}

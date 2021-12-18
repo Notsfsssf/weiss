@@ -67,6 +67,10 @@ func Start(port string, jsonData string) {
 			}
 		}
 	}
+	var doh = "doh.dns.sb"
+	if val, ok := hardMap["doh"]; ok {
+		doh = val
+	}
 	for k, v := range hardMap {
 		OneZeroCache.Data[k] = v
 		fmt.Println(k + v)
@@ -114,7 +118,7 @@ func Start(port string, jsonData string) {
 		}
 		defer tlsCon.Close()
 		clientWriter := bufio.NewReadWriter(bufio.NewReader(tlsCon), bufio.NewWriter(tlsCon))
-		remoteCon := buildOneZeroCon(ctx, hardMap)
+		remoteCon := buildOneZeroCon(ctx, hardMap, doh)
 		if remoteCon == nil {
 			panic("Error host:" + ctx.Req.URL.Hostname())
 		}
@@ -193,7 +197,7 @@ func Close() {
 	}
 }
 
-func buildOneZeroCon(ctx *goproxy.ProxyCtx, hardMap map[string]string) net.Conn {
+func buildOneZeroCon(ctx *goproxy.ProxyCtx, hardMap map[string]string, doh string) net.Conn {
 	OneZeroCache.Lock.RLock()
 	data, ok := OneZeroCache.Data[ctx.Req.URL.Hostname()]
 	OneZeroCache.Lock.RUnlock()
@@ -219,7 +223,7 @@ func buildOneZeroCon(ctx *goproxy.ProxyCtx, hardMap map[string]string) net.Conn 
 	oneZeroReq := OneZeroReq{
 		ctx.Req.URL.Hostname(),
 	}
-	res, err := oneZeroReq.fetch()
+	res, err := oneZeroReq.fetch(doh)
 	if err != nil {
 		panic(err)
 	}
